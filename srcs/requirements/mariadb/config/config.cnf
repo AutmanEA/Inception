@@ -1,0 +1,12 @@
+[mysqld]
+user            = mysql
+pid-file        = /var/run/mysqld/mysqld.pid
+socket          = /var/run/mysqld/mysqld.sock
+port            = 3306
+datadir         = /var/lib/mysql
+symbolic-link   = 0
+
+[client]
+user            = mysql
+password        = mysql
+socket          = /var/run/mysqld/mysqld.sock

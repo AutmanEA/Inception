@@ -1,5 +1,15 @@
 FROM debian:bullseye
 
-WORKDIR /home/vmaelatmi/Inception/srcs/requirements/mariadb
+RUN apt-get update && apt-get install -y    \
+    mariadb-server                          \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN     apt-get update; apt-get upgrade; apt-get -y install mariadb-common
+COPY config/config.cnf /etc/mysql/config.cnf
+COPY config/init.sql /entrypoint-initdb.d/
+COPY script/entrypoint.sh /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 3306
+
+ENTRYPOINT ["entrypoint.sh"]
