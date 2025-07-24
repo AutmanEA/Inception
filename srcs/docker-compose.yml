@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # Base de données MariaDB
+  mariadb:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-myproject}_mariadb
+    restart: unless-stopped
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-testdb}
+      - MYSQL_USER=${MYSQL_USER:-user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
+    volumes:
+      # Persistance des données
+      - mariadb_data:/var/lib/mysql
+      # Logs
+      - ./logs/mariadb:/var/log/mysql
+      # Fichiers de configuration
+      - ./config/config.cnf:/etc/mysql/mariadb.conf.d/50-server.cnf
+      - ./config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      timeout: 20s
+      retries: 10
+      interval: 30s
+      start_period: 30s
+    labels:
+      - "traefik.enable=false"
+
+  # Interface d'administration
+  adminer:
+    image: adminer:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-myproject}_adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - app_network
+    environment:
+      - ADMINER_DEFAULT_SERVER=mariadb
+      - ADMINER_DEFAULT_DB=${MYSQL_DATABASE:-testdb}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=Host(`adminer.localhost`)"
+
+  # Exemple de service web (à décommenter quand vous en aurez besoin)
+  # web:
+  #   build: 
+  #     context: ./web
+  #     dockerfile: Dockerfile
+  #   container_name: ${COMPOSE_PROJECT_NAME:-myproject}_web
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${WEB_PORT:-80}:80"
+  #   depends_on:
+  #     mariadb:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./web/src:/var/www/html
+  #     - ./logs/web:/var/log/apache2
+  #   networks:
+  #     - app_network
+  #   environment:
+  #     - DB_HOST=mariadb
+  #     - DB_NAME=${MYSQL_DATABASE:-testdb}
+  #     - DB_USER=${MYSQL_USER:-user}
+  #     - DB_PASSWORD=${MYSQL_PASSWORD:-password}
+
+  # Service Redis (exemple pour du cache)
+  # redis:
+  #   image: redis:alpine
+  #   container_name: ${COMPOSE_PROJECT_NAME:-myproject}_redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${REDIS_PORT:-6379}:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #     - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+  #   networks:
+  #     - app_network
+  #   command: redis-server /usr/local/etc/redis/redis.conf
+
+volumes:
+  mariadb_data:
+    driver: local
+    name: ${COMPOSE_PROJECT_NAME:-myproject}_mariadb_data
+  
+  # redis_data:
+  #   driver: local
+  #   name: ${COMPOSE_PROJECT_NAME:-myproject}_redis_data
+
+networks:
+  app_network:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-myproject}_network
