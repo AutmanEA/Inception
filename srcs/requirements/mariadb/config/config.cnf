@@ -1,7 +1,7 @@
 [mysqld]
-user            = mysql
-pid-file        = /var/run/mysqld/mysqld.pid
-socket          = /var/run/mysqld/mysqld.sock
-port            = 3306
-datadir         = /var/lib/mysql
-symbolic-link   = 0
+user                    = root
+socket                  = /run/mysqld/mysqld.sock
+port                    = 3306
+datadir                 = /var/lib/mysql
+skip-networking			= 0
+bind-address            = 0.0.0.0
