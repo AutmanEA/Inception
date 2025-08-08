@@ -20,7 +20,7 @@ help: ## Display all commands
 
 up: ## Start services
 	@echo "$(GREEN)Démarrage des services...$(NC)"
-	@mkdir -p ~/data/mariadb ~/data/wordpress
+	@mkdir -p /home/vmaelatmi/data/wordpress /home/vmaelatmi/data/mariadb
 	$(DC) up -d
 #@make status
 
@@ -63,11 +63,14 @@ endif
 mysql: ## Shell MySQL/MariaDB
 	$(DC) exec mariadb mysql -uroot -p
 
-clean: ## Erase all services
+clean: down ## Erase all services
 	@echo "$(YELLOW)Nettoyage...$(NC)"
 	$(DC) down -v --remove-orphans
+	sudo rm -rf /home/vmaelatmi/data/mariadb/*
+	sudo rm -rf /home/vmaelatmi/data/wordpress/*
+
 ## Erase all services
 fclean: clean ## Erase all services
-	@docker system prune -f
+	@docker system prune -af --volumes
 
 dev: build up logs ## Dev mode (build + up + logs)

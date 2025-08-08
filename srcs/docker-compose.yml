@@ -9,85 +9,54 @@ services:
       - mariadb:/var/lib/mysql
     networks:
       - inception_network
+    expose:
+      - "3306"
     healthcheck:
-      test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u root -p$$(MYSQL_ROOT_PASSWORD)"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 3s
       retries: 3
 
   wordpress:
     container_name: wordpress
     build: ./requirements/wordpress/
+    restart: unless-stopped
+    env_file: .env
     depends_on:
       mariadb:
         condition: service_healthy
-    restart: unless-stopped
-    env_file:
-      - .env
     volumes:
-      - wordpress:/var/lib/wordpress
+      - wordpress:/var/www/html
     networks:
       - inception_network
-    
-  # Interface d'administration
-  # adminer:
-  #   image: adminer:latest
-  #   container_name: ${COMPOSE_PROJECT_NAME:-myproject}_adminer
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${ADMINER_PORT:-8080}:8080"
-  #   depends_on:
-  #     mariadb:
-  #       condition: service_healthy
-  #   networks:
-  #     - app_network
-  #   environment:
-  #     - ADMINER_DEFAULT_SERVER=mariadb
-  #     - ADMINER_DEFAULT_DB=${MYSQL_DATABASE:-testdb}
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.routers.adminer.rule=Host(`adminer.localhost`)"
+    expose:
+      - "9000"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f php-fpm || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
-  # Exemple de service web (à décommenter quand vous en aurez besoin)
-  # web:
-  #   build: 
-  #     context: ./web
-  #     dockerfile: Dockerfile
-  #   container_name: ${COMPOSE_PROJECT_NAME:-myproject}_web
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${WEB_PORT:-80}:80"
-  #   depends_on:
-  #     mariadb:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./web/src:/var/www/html
-  #     - ./logs/web:/var/log/apache2
-  #   networks:
-  #     - app_network
-  #   environment:
-  #     - DB_HOST=mariadb
-  #     - DB_NAME=${MYSQL_DATABASE:-testdb}
-  #     - DB_USER=${MYSQL_USER:-user}
-  #     - DB_PASSWORD=${MYSQL_PASSWORD:-password}
-
-  # Service Redis (exemple pour du cache)
-  # redis:
-  #   image: redis:alpine
-  #   container_name: ${COMPOSE_PROJECT_NAME:-myproject}_redis
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${REDIS_PORT:-6379}:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #     - ./config/redis.conf:/usr/local/etc/redis/redis.conf
-  #   networks:
-  #     - app_network
-  #   command: redis-server /usr/local/etc/redis/redis.conf
+  nginx:
+    container_name: nginx
+    build: ./requirements/nginx
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      wordpress:
+        condition: service_healthy
+    volumes:
+      - wordpress:/var/lib/html
+    networks:
+      - inception_network
+    ports:
+      - "443:443"
 
 volumes:
   mariadb:
-    name: mariadb  
+    name: mariadb
     driver: local
     driver_opts:
       device: /home/vmaelatmi/data/mariadb
@@ -95,7 +64,7 @@ volumes:
       type: none
 
   wordpress:
-    name: wordpress  
+    name: wordpress
     driver: local
     driver_opts:
       device: /home/vmaelatmi/data/wordpress

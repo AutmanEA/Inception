@@ -1,11 +1,13 @@
 #!/bin/bash
 set -e
 
-mkdir -p /run/mysqld
-chown -R mysql:mysql /run/mysqld
+if [ ! -d "/var/lib/mysql/${MYSQL_DATABASE}" ]; then
 
-if [ ! -d /var/lib/mysql/${MYSQL_DATABASE} ]; then
-    mysql_install_db --user=mysql --ldata=/var/lib/mysql > /dev/null
+    mysql_install_db --user=mysql
+
+    while ! mysqladmin ping --silent; do
+        sleep 1
+    done
 
     cat << EOF > /init.sql
 
