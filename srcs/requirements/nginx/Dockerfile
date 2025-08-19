@@ -1,13 +1,22 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
-RUN apt-get update && apt-get upgrade -y        \
-    && apt-get install -y nginx openssl gettext \
-    && rm -rf /var/lib/apt/lists/*              \
-    && rm -f /etc/nginx/sites-enabled/default   #
+## Installing core
+RUN apt-get upgrade -y > /dev/null && apt-get update -y > /dev/null
 
-COPY ./config/nginx.conf /etc/nginx/sites-available/default.conf
-COPY ./script/entrypoint.sh /usr/local/bin/entrypoint.sh
+## Debug (ps aux)
+RUN apt-get install -y procps > /dev/null
 
-RUN chmod +x /usr/local/bin/entrypoint.sh
+## Installing nginx (core) and openssl (for security <https>)
+RUN apt-get install -y nginx openssl > /dev/null
 
-ENTRYPOINT ["entrypoint.sh"]
+## Cleaning apt-get unused cache
+RUN rm -rf /var/lib/apt/lists/*
+
+## Setup config file
+COPY ./utils/config.conf /etc/nginx/sites-available/default
+
+## Setup entrypoint
+COPY ./utils/entrypoint.sh /usr/bin/entrypoint.sh
+RUN chmod +x /usr/bin/entrypoint.sh
+
+ENTRYPOINT [ "entrypoint.sh" ]

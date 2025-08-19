@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ ! -d "/var/lib/mysql/${MYSQL_DATABASE}" ]; then
+if [ ! -d "/var/lib/mysql/$MYSQL_DATABASE" ]; then
 
     mysql_install_db --user=mysql
 

@@ -1,28 +1,33 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
-RUN apt-get update && apt-get upgrade -y                                                    \
-    && apt-get install -y                                                                   \
-        php7.4-fpm                                                                          \
-        php7.4-mysql                                                                        \
-        php7.4-curl                                                                         \
-        php7.4-gd                                                                           \
-        php7.4-mbstring                                                                     \
-        php7.4-xml                                                                          \
-        php7.4-zip                                                                          \
-        php7.4-intl                                                                         \
-        php7.4-bcmath                                                                       \
-        curl                                                                                \
-    && rm -rf /var/lib/apt/lists/*                                                          \
-    && curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar    \
-    && chmod +x wp-cli.phar                                                                 \
-    && mv wp-cli.phar /usr/local/bin/wp                                                     #
+## Installing core
+RUN apt-get upgrade -y > /dev/null && apt-get update -y > /dev/null
+RUN apt-get install -y curl > /dev/null
 
+## Debug (ps aux)
+RUN apt-get install -y procps > /dev/null
+
+## Installing php (core), php-mysql (mariadb <-> php), php-fpm (nginx <-> php) 
+RUN apt-get install -y php8.2 php8.2-mysql php8.2-fpm > /dev/null
+
+## Cleaning apt-get unused cache
+RUN rm -rf /var/lib/apt/lists/*
+
+## Downloading WP-CLI and allow 'wp' command (to setup wordpress with scripts)
 WORKDIR /var/www/html
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+RUN chmod +x wp-cli.phar
+RUN mv wp-cli.phar /usr/bin/wp
 
-COPY ./config/config.conf /etc/php/7.4/fpm/pool.d/www.conf
-COPY ./script/entrypoint.sh /usr/local/bin/entrypoint.sh
+## Setup entrypoint
+COPY ./utils/entrypoint.sh /usr/bin/entrypoint.sh
+RUN chmod +x /usr/bin/entrypoint.sh
 
-RUN chmod +x /usr/local/bin/entrypoint.sh                                                   \
-    && chown -R root:root /var/www/html                                                     #
+## Setup config
+COPY ./utils/config.conf /etc/php/8.2/fpm/pool.d/www.conf
 
-ENTRYPOINT ["entrypoint.sh"]
+## add permissions to install wordpress
+RUN chown -R www-data:www-data /var/www/html
+RUN chmod 755 /var/www/html
+
+ENTRYPOINT [ "entrypoint.sh" ]

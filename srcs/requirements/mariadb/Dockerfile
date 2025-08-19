@@ -1,16 +1,29 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
-RUN apt-get update && apt-get upgrade -y    \
-    && apt-get install -y mariadb-server    \
-    && rm -rf /var/lib/apt/lists/*          #
+## Installing core
+RUN apt-get upgrade -y > /dev/null && apt-get update -y > /dev/null
+RUN apt-get install gettext-base > /dev/null
 
-COPY ./config/config.conf /etc/mysql/mariadb.conf.d/50-server.cnf
-COPY ./script/entrypoint.sh /usr/local/bin/entrypoint.sh
+## Installing mariadb core
+RUN apt-get install -y mariadb-server-core mariadb-client-core > /dev/null
 
-RUN mkdir -p /var/lib/mysql                     \
-    && chown -R mysql:mysql /var/lib/mysql      \
-    && mkdir -p /run/mysqld                     \
-    && chown -R mysql:mysql /run/mysqld         \
-    && chmod +x /usr/local/bin/entrypoint.sh    #
+## Debug (ps aux)
+RUN apt-get install -y procps > /dev/null
 
-ENTRYPOINT ["entrypoint.sh"]
+## Cleaning apt-get unused cache
+RUN rm -rf /var/lib/apt/lists/*
+
+## Create user mysql
+RUN groupadd -r mysql && useradd -r -g mysql mysql
+
+## Config files and init sql
+COPY ./utils/config.conf /etc/mysql/mariadb.conf.d/50-server.cnf
+COPY ./utils/init.sql /init.sql
+RUN mkdir -p /run/mysqld
+RUN chown -R mysql:mysql /run/mysqld
+
+## Setup entrypoint
+COPY ./utils/entrypoint.sh /usr/bin/entrypoint.sh
+RUN chmod +x /usr/bin/entrypoint.sh
+
+ENTRYPOINT [ "entrypoint.sh" ]
