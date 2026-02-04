@@ -1,5 +1,0 @@
-[mysqld]
-bind-address = 0.0.0.0
-# autres réglages utiles :
-# innodb_buffer_pool_size = 128M
-# max_connections = 200
